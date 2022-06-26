@@ -15,30 +15,35 @@ import Shared
 
 class Driver {
   static func check (_ completion: @escaping() -> Void) {
-    if !Driver.isInstalled || !Driver.isCompatible {
-      let isIncompatable = Driver.isInstalled && !Driver.isCompatible
-      let message = isIncompatable ?
-        "For unknown reason the version of Audio Driver needed for eqMac to work currently is not compatable. Try restarting your computer and run eqMac again. In that doesn't work, try re-installing eqMac from our website."
-        : "For unknown reason the Audio Driver needed for eqMac to work currently is not installed. Try restarting your computer and run eqMac again. In that doesn't work, try re-installing eqMac from our website."
-      let title = isIncompatable ? "The eqMac Audio Driver is Incompatable" : "The eqMac Audio Driver is not installed"
-      Alert.withButtons(
-        title: title,
-        message: message,
-        buttons: ["Restart Mac", "Re-install eqMac", "Quit"]
-      ) { buttonPressed in
-        switch NSApplication.ModalResponse(buttonPressed) {
-          case .alertFirstButtonReturn:
-            Application.restartMac()
-            break
-          case .alertSecondButtonReturn:
-            NSWorkspace.shared.open(Constants.WEBSITE_URL)
-          default: break
-        }
-        return Application.quit()
-      }
-    } else {
-      completion()
-    }
+
+    // bypass driver check and temporarily use currently installed driver
+    completion()
+
+    // if !Driver.isInstalled || !Driver.isCompatible {
+    //   let isIncompatable = Driver.isInstalled && !Driver.isCompatible
+    //   let message = isIncompatable ?
+    //     "For unknown reason the version of Audio Driver needed for eqMac to work currently is not compatable. Try restarting your computer and run eqMac again. In that doesn't work, try re-installing eqMac from our website."
+    //     : "For unknown reason the Audio Driver needed for eqMac to work currently is not installed. Try restarting your computer and run eqMac again. In that doesn't work, try re-installing eqMac from our website."
+    //   let title = isIncompatable ? "The eqMac Audio Driver is Incompatable" : "The eqMac Audio Driver is not installed"
+    //   Alert.withButtons(
+    //     title: title,
+    //     message: message,
+    //     buttons: ["Restart Mac", "Re-install eqMac", "Quit"]
+    //   ) { buttonPressed in
+    //     switch NSApplication.ModalResponse(buttonPressed) {
+    //       case .alertFirstButtonReturn:
+    //         Application.restartMac()
+    //         break
+    //       case .alertSecondButtonReturn:
+    //         NSWorkspace.shared.open(Constants.WEBSITE_URL)
+    //       default: break
+    //     }
+    //     return Application.quit()
+    //   }
+    // } else {
+    //   completion()
+    // }
+
   }
 
   private static var showChecks: Int = 0
@@ -85,7 +90,7 @@ class Driver {
   static var pluginId: AudioObjectID? {
     return AudioDevice.lookupIDByPluginBundleID(by: DRIVER_BUNDLE_ID)
   }
-  
+
   static var isInstalled: Bool {
     get {
       return self.device != nil || self.pluginId != nil
@@ -112,7 +117,7 @@ class Driver {
 
       var newLatency = newValue
       var latency: CFNumber = CFNumberCreate(kCFAllocatorDefault, CFNumberType.sInt32Type, &newLatency)
-      
+
       checkErr(AudioObjectSetPropertyData(Driver.device!.id, &EQMDeviceCustom.addresses.latency, 0, nil, size, &latency))
     }
   }
@@ -121,52 +126,52 @@ class Driver {
     get {
       if Driver.device == nil { return false }
       var size: UInt32 = UInt32(MemoryLayout<CFBoolean>.size)
-      
+
       var shownBool = kCFBooleanFalse
-      
+
       let err = AudioObjectGetPropertyData(Driver.device!.id, &EQMDeviceCustom.addresses.shown, 0, nil, &size, &shownBool)
       if err == noErr {
         return CFBooleanGetValue(shownBool!)
       }
-      
+
       // Workaround around a bug in the Driver where it wasn't aware of address
       return Driver.device!.canBeDefaultDevice(direction: .playback)
     }
     set {
       if Driver.device == nil { return }
-      
+
       let size: UInt32 = UInt32(MemoryLayout<CFBoolean>.size)
       var shownBool: CFBoolean = newValue.cfBooleanValue
-      
+
       checkErr(AudioObjectSetPropertyData(Driver.device!.id, &EQMDeviceCustom.addresses.shown, 0, nil, size, &shownBool))
     }
   }
-  
+
   static var installedVersion: Version {
     if Driver.device == nil { return .null }
     var size: UInt32 = UInt32(MemoryLayout<CFString>.size)
-    
+
     var version: CFString? = nil
-    
+
     checkErr(AudioObjectGetPropertyData(Driver.device!.id, &EQMDeviceCustom.addresses.version, 0, nil, &size, &version))
 
     let verStr = version as String?
     return verStr != nil ? (Version(tolerant: verStr!) ?? .null) : .null
   }
-  
+
   static var isCompatible: Bool {
     let compatibleRange = Constants.DRIVER_MINIMUM_VERSION ..< Version(2, 0, 0)
     return compatibleRange.contains(installedVersion)
   }
-  
+
   static var hidden: Bool {
     get { return !shown }
     set { shown = !newValue }
   }
-  
+
   static var device: AudioDevice? {
     return AudioDevice.lookup(by: Constants.DRIVER_DEVICE_UID)
   }
-  
+
 }
 
