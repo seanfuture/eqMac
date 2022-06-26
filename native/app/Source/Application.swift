@@ -83,6 +83,8 @@ class Application {
     
     self.settings = Settings()
 
+    NSApp.setActivationPolicy(.accessory)
+
     Networking.startMonitor()
     
     Driver.check {
