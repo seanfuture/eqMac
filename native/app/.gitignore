@@ -7,6 +7,8 @@ eqMacAudio.xcodeproj/xcuserdata
 eqMacAudioDriver.xcodeproj/xcuserdata
 eqMacAudio.xcworkspace/xcuserdata
 
+Embedded
+
 OpenSSL/*
 !OpenSSL/.gitkeep
 
